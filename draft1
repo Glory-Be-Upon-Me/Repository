@@ -1,0 +1,537 @@
+from datetime import datetime
+import json
+
+
+
+bookdict= {}
+patrondict={}
+transdict={}
+saveBooksDict={};savePatronsDict={};saveTransDict={}
+
+class Book:
+    def __init__(self, ISBN, title='unknown', author = 'unknown', genre= 'unknown', quantity= 1):
+        self.title= title
+        self.ISBN = ISBN
+        self.author = author
+        self.genre=genre
+        self.quantity= quantity
+        self.quantShelved=quantity
+        self.checkoutList=[]
+        bookdict['book'+str(ISBN)]= str(self.ISBN)
+
+
+    def showdetails(self):
+        try:
+            return(f"The book {self.title} has the ISBN {self.ISBN} and was written by {self.author} in the genre {self.genre}. We have {self.quantShelved} out of {self.quantity} in stock. It has been checked out by {self.checkoutList}")
+        except:
+            return("That book is not in the library")
+
+    def updatedetails(self,title='unknown', author = 'unknown',genre= 'unknown'):
+        try:
+            if title != 'unknown':
+                self.title = title
+            if author != 'unknown':
+                self.author = author
+            if genre != 'unknown':
+                self.genre = genre
+        except:
+            return("That book is not in the library")
+
+    def bookCheckout(self, patronID):
+        try:
+            if self.quantShelved == 0:
+                return ("There shouldn't be any of that book on the shelves.")
+            else:
+                exec(f"{self.ISBN+patronID}=Trans(bookID='{self.ISBN}', patron= '{patronID}')")
+                self.quantShelved -= 1
+                self.checkoutList.append(patronID)
+        except:
+            return ("That book is not in the library")
+
+    def bookReturn(self,patronID):
+        try:
+            if patronID in self.checkoutList:
+                self.quantShelved += 1
+                self.checkoutList.remove(patronID)
+                return Trans.returnTrans(("patron"+patronID+"book"+self.ISBN),patronID, self.ISBN)
+            else:
+                return ("That person doesn't appear to have checked out that book.")
+        except:
+            return ("That book is not in the library")
+
+    def writeOff(self, patronID=""):
+        try:
+            if patronID != "":
+                if patronID in self.checkoutList:
+                    self.checkoutList.remove(patronID)
+                    exec(patronID + ".duedates.remove(" + str(self.ISBN) + ")", globals())
+                else:
+                    return ("The ID you typed does not have that book checked out.")
+            else:
+                self.quantShelved -= 1
+            if self.quantity != 1:
+                self.quantity -= 1
+            else:
+                exec("del book"+ self.ISBN, globals())
+            return ('Done!')
+        except:
+            return("That book is not in the library")
+    def addBook(self, ISBN):
+        try:
+            if eval(f"{self} != Book(ISBN)"):
+                exec(f"{self}.quantity += 1")
+                exec(f"{self}.quantShelved +=1")
+                bookdict[self] =ISBN +","+self.title
+        except:
+            x = f"{self}=Book('{str(ISBN)}')"
+            exec(x, globals())
+
+
+class Patron:
+    def __init__(self, name, id, contact_info):
+        self.name= name
+        self.id= id
+        self.contact_info= contact_info
+        self.duedates={}
+        patrondict['book'+str(id)] = self
+
+
+
+    def update(self, name, contact_info):
+        self.name= name
+        self.contact_info= contact_info
+
+    def seeDetails(self):
+        try:
+            return "You are " + self.name+ " and can be reached at " + self.contact_info
+        except:
+            error()
+
+
+    def removeP(self):
+        try:
+            exec("del patron"+self.id, globals())
+        except:
+            error()
+
+
+
+class Trans:
+    def __init__(self, bookID, patron):
+        date=datetime.now()
+        y= date.year
+        m= int(date.strftime('%m'))
+        d= int(date.strftime('%d'))
+        m+=1
+        if m > 12:
+            m-=12
+            y+=1
+        self.duedate=str(y)+","+str(m)+','+str(d)
+        exec(patron+".duedates['"+str(bookID)+"']='"+str(self.duedate)+"'")
+        self.book =bookID
+        self.patron=patron
+        transdict[patron+bookID]= self
+
+    def returnTrans(self, bookID, patron):
+        exec(patron + ".duedates.remove(" + str(bookID) + ")",globals())
+        del transdict[self.patron+self.book]
+        del self              # This instance self-terminates here
+
+def save():
+    exec("saveBooksDict={};savePatronsDict={};saveTransDict={}", globals())
+    for i in bookdict.keys():
+        exec(f"saveBooksDict[{i}.ISBN]=[{i}.title,{i}.ISBN,{i}.author,{i}.genre,{i}.quantity,{i}.quantShelved,{i}.checkoutList]",globals())
+    for i in patrondict.keys():
+        exec(f"savePatronsDict[{i}.id]=[{i}.name,{i}.id,{i}.contact_info,{i}.duedates]", globals())
+    for i in transdict.keys():
+        exec(f"saveTransDict[{i}.id]=[{i}.duedate,{i}.book,{i}.patron]", globals())
+    savelist=[saveBooksDict,savePatronsDict,saveTransDict,bookdict,patrondict,transdict]
+    with open("Library_info.json", "w") as file:
+        json.dump(savelist, file, indent=2)  # Indentation for readability
+
+
+with open("Library_info.json", "r") as file:
+    savedlist = json.load(file)
+    for i in savedlist[0].keys():
+        exec(
+            f"{'book' + i}=Book('{savedlist[0][i][0]}','{savedlist[0][i][1]}','{savedlist[0][i][2]}','{savedlist[0][i][3]}','{savedlist[0][i][4]}'); {'book' + i}.quantShelved={savedlist[0][i][5]}; {'book' + i}.checkoutList={savedlist[0][i][6]}",
+            globals())
+    for i in savedlist[1].keys():
+        exec(
+            f"{'patron' + i}=Patron('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}','{savedlist[1][i][3]}')",
+            globals())
+    for i in savedlist[2].keys():
+        exec(f"{i}=Trans('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}')", globals())
+    exec("bookdict = savedlist[3]; patrondict = savedlist[4]; transdict = savedlist[5]", globals())
+
+
+
+
+import tkinter as tk
+import random as rand
+
+root = tk.Tk()
+
+# root window title and dimension
+root.title("Library")
+# Set geometry (widthxheight)
+root.geometry('900x600')
+
+
+def check():
+    wall=tk.Label(height=60,width=30)
+    wall.place(relx=.1,rely=.1, anchor='center')
+    z = tk.StringVar(value='Null')
+    def remove():
+        x.place_forget()
+        y.place_forget()
+        z.set('True')
+    x = tk.Button(text='confirm submission', command=remove)
+    x.place(relx=0.5, rely=0.5, anchor='center')
+    def rmv():
+        y.place_forget()
+        x.place_forget()
+        z.set('False')
+    y = tk.Button(text='Never mind', command=rmv)
+    y.place(relx=0.5, rely=0.55, anchor='center')
+    y.wait_variable(z)
+    wall.place_forget()
+    if z.get() == 'True':
+        return True
+    else:
+        return False
+
+isbn = tk.Entry()
+isbn.place(relx=0.5, rely=0.5, anchor='center')
+i= tk.Label(text="write ISBN of the book here, then click a button")
+i.place(relx=0.5, rely=0.45, anchor='center')
+
+PatronID= tk.Entry()
+PatronID.place(relx=0.9, rely=0.1, anchor='center')
+p= tk.Label(text="Type in your PatronID here")
+p.place(relx=0.9, rely=0.05, anchor='center')
+
+def error():
+    def poof():
+        showresults.place_forget()
+    showresults = tk.Button(root, command=poof, text="Please check your inputs.")
+    showresults.place(relx=0.5, rely=0.45, anchor='center')
+
+
+
+def update():
+
+    exp= tk.Label(text="write in all known information, then press the button")
+    exp.place(relx=0.4, rely=0.05, anchor='center')
+    title = tk.Entry()
+    title.place(relx=0.4, rely=0.15, anchor='center')
+    t = tk.Label(text="write title of the book here")
+    t.place(relx=0.4, rely=0.1, anchor='center')
+    author = tk.Entry()
+    author.place(relx=0.4, rely=0.25, anchor='center')
+    a = tk.Label(text="write author of the book here")
+    a.place(relx=0.4, rely=0.20, anchor='center')
+    genre = tk.Entry()
+    genre.place(relx=0.4, rely=0.35, anchor='center')
+    g = tk.Label(text="write genre of the book here")
+    g.place(relx=0.4, rely=0.30, anchor='center')
+    plate=tk.Label(height=10,width=50)
+    plate.place(relx=0.5, rely=0.5, anchor='center')
+    def poof():
+        exp.place_forget()
+        title.place_forget()
+        t.place_forget()
+        author.place_forget()
+        a.place_forget()
+        genre.place_forget()
+        g.place_forget()
+        button.place_forget()
+        nvm.place_forget()
+        plate.place_forget()
+        wall.place_forget()
+    def go():
+        try:
+            cute = f"book{isbn.get()}.updatedetails("
+            if title.get() != "":
+                cute += 'title=' + "'" + str(title.get()) + "'"
+            if title.get() != "" and (author.get() != "" or genre.get() != ""):
+                cute += ','
+            if author.get() != "":
+                cute += 'author=' + "'" + str(author.get()) + "'"
+            if author.get() != "" and genre.get() != "":
+                cute += ','
+            if genre.get() != "":
+                cute += 'genre=' + "'" + str(genre.get()) + "'"
+            cute += ')'
+            exec(cute)
+            exp.place_forget()
+            title.place_forget()
+            t.place_forget()
+            author.place_forget()
+            a.place_forget()
+            genre.place_forget()
+            g.place_forget()
+            button.place_forget()
+            nvm.place_forget()
+            plate.place_forget()
+            wall.place_forget()
+        except:
+            error()
+    nvm=tk.Button(text="Never mind", command=poof)
+    nvm.place(relx=0.4,rely=.45,anchor='center')
+    button=tk.Button(text='Done!',command=go)
+    button.place(relx=0.4, rely=0.4, anchor='center')
+    wall=tk.Label(height=60,width=30)
+    wall.place(relx=.01,rely=.1, anchor='center')
+def add():
+    ISBN= isbn.get()
+    name= 'book' + ISBN
+    checker = check()
+    if checker == True:
+        Book.addBook(name, ISBN)  #I don't know how this doesn't throw an error.
+        update()
+
+
+def duedatesrmv():        #don't worry about the errors, it can only run after dates and wall appear.
+    for j in dates.keys():
+        exec(j + "button.grid_forget()", globals())
+    wall.place_forget()
+
+def rmvBookNames():
+    for i in bookdict.keys():
+        exec(i+"button.grid_forget()", globals())
+    wall.place_forget()
+
+def writeOff():
+    ISBN= 'book' +str(isbn.get())
+    if check():
+        try:
+            def poof():
+                showresults.place_forget()
+            showresults= tk.Button(root, command=poof, text=eval(f"{ISBN}.writeOff('{PatronID.get()}')",))
+            showresults.place(relx=0.5, rely=0.45, anchor='center')
+        except:
+            error()
+
+def view():
+    wall=tk.Label(height=60,width=30)
+    wall.place(relx=.1,rely=.1, anchor='center')
+    ISBN= 'book' +str(isbn.get())
+    def poof():
+        wall.place_forget()
+        showresults.place_forget()
+    try:
+        showresults= tk.Button(root, command=poof, text=eval(f"{ISBN}.showdetails()"))
+        showresults.place(relx=0.5, rely=0.45, anchor='center')
+    except:
+        wall.place_forget()
+        error()
+
+
+def checkOut():
+    if check():
+        try:
+            ISBN= 'book'+isbn.get()
+            print(eval(f"{ISBN}.bookCheckout('{"patron"+PatronID.get()}')"))
+        except:
+            error()
+
+
+
+def ret():
+    try:
+        ISBN = 'book' + str(isbn.get())
+        def poof():
+            showresults.place_forget()
+        showresults = tk.Button(root, command=poof, text=eval(f"{ISBN}.bookReturn('patron+{PatronID.get()}')"), )
+        showresults.place(relx=0.5, rely=0.45, anchor='center')
+    except:
+        error()
+
+
+def LibrarianLogin():
+    if login.get() == 'sudo':
+        LibraryLock.place_forget()
+    else:
+        LibraryLock.place(relx=.05,rely=.24, anchor='center')
+
+
+
+def register():
+    wall=tk.Label(height=60,width=30)
+    wall.place(relx=.1,rely=.1, anchor='center')
+    def poof():
+        x.place_forget()
+        y.place_forget()
+        wall.place_forget()
+    def go():
+        x.place_forget()
+        y.place_forget()
+        name=tk.Entry()
+        name.place(relx=.5, rely=.40, anchor='center')
+        PatronID.insert(index=0, string=id)
+        def reg():
+            if str(name.get()) != "" and str(contact_info.get()) != "":
+                name.place_forget()
+                n.place_forget()
+                contact_info.place_forget()
+                wall.place_forget()
+                exec("patron"+id+f"= Patron('{str(name.get())}', '{id}', '{str(contact_info.get())}')", globals())
+        n=tk.Button(text="Enter name above and contact info below.", command=reg)
+        n.place(relx=.5, rely=.45, anchor='center')
+        contact_info= tk.Entry()
+        contact_info.place(relx=.5,rely=.5, anchor='center')
+    id= str(int(rand.random()*8999 + 1000))
+    x=tk.Button(text="Your ID will be " + id + " if you click here", command=go, width=50)
+    x.place(relx=.5, rely=.45, anchor='center')
+    y=tk.Button(text="never mind", command=poof, width= 30)
+    y.place(relx=.5,rely=.5, anchor="center")
+
+
+
+def updateP():
+    wall=tk.Label(height=60,width=30)
+    wall.place(relx=.1,rely=.1, anchor='center')
+    def poof():
+        v.place_forget()
+        w.place_forget()
+        x.place_forget()
+        y.place_forget()
+        z.place_forget()
+        wall.place_forget()
+    def go():
+        if x.get != "" and z.get != "" and str(PatronID.get()) != "":
+            v.place_forget()
+            w.place_forget()
+            x.place_forget()
+            y.place_forget()
+            z.place_forget()
+            wall.place_forget()
+            try:
+                exec(f"patron{(str(PatronID.get()))}.update('{str(z.get())}', '{str(x.get())}')")
+            except:
+                error()
+    try:
+
+        w = tk.Label(text= eval("patron"+str(PatronID.get()) + ".seeDetails()"))
+        w.place(relx=.5, rely=.3, anchor='center')
+        v= tk.Button(text="Never mind", command=poof)
+        v.place(relx=.5,rely=.55, anchor='center')
+        x = tk.Entry()
+        x.place(relx=.5, rely=.5, anchor='center')
+        y= tk.Button(text="Enter name above and contact info below.", command=go)
+        y.place(relx=.5, rely=.45, anchor='center')
+        z= tk.Entry()
+        z.place(relx=.5, rely=.4, anchor='center')
+    except:
+        wall.place_forget()
+        error()
+
+def remove():
+    id= "patron"+PatronID.get()
+    if check():
+        exec(id+".removeP()")
+
+def showAll():
+    exec("wall = tk.Label(height=50, width=30)",globals())
+    wall.place(relx=.1, rely=.1, anchor='center')
+    def rmvBookNames():
+        for i in bookdict.keys():
+            exec(i+"button.grid_forget()", globals())
+        wall.place_forget()
+    n=1
+    m=3
+    for i in bookdict.keys():
+        exec(i+f"button= tk.Button(text='{i},{i}.title,command=rmvBookNames)",globals())
+        exec(i+"button.grid(row="+str(n)+", column="+str(m)+")",globals())
+        n+=1
+        if n == 10:
+            m+=1
+            n=1
+    if n==1 and m==3:
+        def rmv():
+            button0.grid_forget()
+            wall.place_forget()
+        button0= tk.Button(text="none",command=rmv)
+        button0.grid(row=1, column=3)
+
+def dueDates():
+    try:
+        exec(("dates = patron"+str(PatronID.get())+".duedates"), globals())
+        exec("wall = tk.Label(height=50, width=30)", globals())
+        wall.place(relx=.1, rely=.1, anchor='center')
+        n = 1
+        m = 3
+        for j in dates.keys():
+            exec(j + f"button= tk.Button(text='{j}, {str(dates[j])}',command=duedatesrmv)",globals())
+            exec(j + "button.grid(row=" + str(n) + ", column=" + str(m) + ")", globals())
+            n += 1
+            if n == 10:
+                m += 1
+                n = 1
+        def poof():
+            book0button.grid_forget()
+        if n == 1 and m ==3:
+            book0button=tk.Button(text='none', command=poof)
+            book0button.grid(row=1,column=3)
+    except:
+        error()
+
+def show():
+    print("hold on")
+
+
+
+
+
+addBook = tk.Button(root, text="Add a book", command=add)
+addBook.grid(column=1, row=3)
+
+viewBook= tk.Button(root, text="View details", command=view)
+viewBook.grid(column=1, row=2)
+
+updateBook= tk.Button(root, text="Update a book", command=update)
+updateBook.grid(column=1, row=4)
+
+checkOutBook = tk.Button(root, text="Take out a book", command=checkOut)
+checkOutBook.grid(column=1, row=0)
+
+writeOffBook = tk.Button(root, text="Write off a book", command=writeOff)
+writeOffBook.grid(column=1, row=5)
+
+returnBook= tk.Button(root, text="Return a book", command=ret)
+returnBook.grid(column=1, row=1)
+
+showAllBooks = tk.Button(text="Show all books", command=showAll)
+showAllBooks.grid(column=1,row=8)
+
+registerPatron= tk.Button(text="Register here", command=register)
+registerPatron.grid(column=1, row=9)
+
+updatePatron= tk.Button(text="Update details", command=updateP)
+updatePatron.grid(column=1, row=10)
+
+removePatron= tk.Button(text="Delete account", command=remove)
+removePatron.grid(column=1, row=6)
+
+seeDates= tk.Button(text="My DueDates", command=dueDates)
+seeDates.grid(column=1, row=11)
+
+login = tk.Entry()
+login.place(relx=.5, rely=.9, anchor='center')
+
+l =tk.Button(text='Input library credentials', command=LibrarianLogin)
+l.place(relx=.5,rely=.85, anchor='center')
+
+saveFile= tk.Button(text='Save data', command=save)
+saveFile.place(relx=.8,rely=.8)
+
+showAllAccounts =tk.Button(text='show accounts', command=show)
+showAllAccounts.grid(row=7, column=1)
+
+LibraryLock= tk.Label(height=9, width=15)
+LibraryLock.place(relx=.05,rely=.24, anchor='center')
+
+
+tk.mainloop()
+
