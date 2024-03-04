@@ -1,60 +1,14 @@
 This code produces a library management system. 
 It comes in three classes, followed by a set of functions for the GUI.
 
- ]_____________________
- 
- ]-
- 
- ]-
- 
- ]--- class 1(Book)
- 
- ]  --
- 
- ]  --functions
- 
- ]  --
- 
- ]--- class 2(Patron)
- 
- ]  --
- 
- ]  -- functions
- 
- ]  --
- 
- ]--- class 3(Transaction)
- 
- ]  --functions
- 
- ]  --
- 
- ]--save function
- 
- ]--
- 
- ]--
- 
- ]--functions for GUI 
- 
- ]--
- 
- ]--
- 
- ]-
+ ![Screenshot (103)](https://github.com/Glory-Be-Upon-Me/Repository/assets/162057176/301bf5a3-55f0-47ee-a9ad-93eb1469c14d)
 
- ]-initialize GUI
- 
- ]-
- 
- ]____________________
- 
 In order to use it:
 -run the code
 
--click "register here" and input your name and contact information, or a shortened form, then click on the prompt. This will allow you to take out and return books.
+-click "register here" and input your name and contact information, or any shortened form, then click on the prompt. This will allow you to take out and return books.
 
--type "sudo" into the lower textbox and click the label above it to access the full suite of features, including the ability to add books. Change the password to something else and click again to lock down these features again.
+-type "sudo" into the lower textbox and click the label above it to access the full suite of features, including the ability to add books. Change the entered password to something else and click again to lock down these features again.
 
 -most buttons are obvious. Some require the central "ISBN" field to be filled, or the "PatronID" field in the top right. If this is not filled, they will give you a popup telling you to check your inputs.
 
@@ -76,12 +30,11 @@ In order to use it:
 ![Screenshot (95)](https://github.com/Glory-Be-Upon-Me/Repository/assets/162057176/9129deda-53ae-47de-86c7-bb82e737e22e)
 ...You get the idea.
 
+While writing this, I learned to automate the creation of class objects using exec(), and to use the tkinter module to create a GUI. One of my main challenges was that creating a class requires a variable to hold it, and I had no way of automatically generating and using new ones until I learned to use exec() and eval(). 
+I also had to deal with many errors, like missing apostrophes and, at one point, accidentally referencing the _selected_ ISBN instead of the one I was displaying. However, I was able to find all of them.
 
+This code is likely vulnerable to injection attacks, and the admin password cannot be changed without going into the code and editing it. Additionally, some of the early functions are written sloppily and are unnecesarily long. 
 
+Also, you can find the admin password by just reading the source code. That's probably a security vulnerablity.
 
-
-
-
-
-
-
+If I were writing it again, it would probably be more tidy and consistent.
