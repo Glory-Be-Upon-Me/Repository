@@ -95,11 +95,11 @@ class Book:
 
 class Patron:
     def __init__(self, name, id, contact_info):
-        self.name= name
-        self.id= id
-        self.contact_info= contact_info     #same as Book.__init__()
+        self.name= str(name)
+        self.id= str(id)
+        self.contact_info= str(contact_info)     #same as Book.__init__()
         self.duedates={}
-        patrondict['book'+str(id)] = self
+        patrondict['patron'+str(id)] = self.id
 
 
 
@@ -118,6 +118,7 @@ class Patron:
     def removeP(self):
         try:
             exec("del patron"+self.id, globals())      #removes a patron
+            del patrondict['patron'+self.id]
             success()
         except:
             error()
@@ -161,17 +162,18 @@ def save():
     success()
 
 
-with open("Library_info.json", "r") as file:
-    savedlist = json.load(file)
-    for i in savedlist[0].keys():   #pull everything out of six dictionaries in a list in a file
-        exec(f"{'book' + i}=Book('{savedlist[0][i][1]}','{savedlist[0][i][0]}','{savedlist[0][i][2]}','{savedlist[0][i][3]}','{savedlist[0][i][4]}'); {'book' + i}.quantShelved={savedlist[0][i][5]}; {'book' + i}.checkoutList={savedlist[0][i][6]}",globals())
-    for i in savedlist[1].keys():
-        exec(f"{'patron' + i}=Patron('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}','{i}.duedates={savedlist[1][i][3]}')",globals())
-    for i in savedlist[2].keys():
-        exec(f"{i}=Trans('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}')", globals())
-    exec("bookdict = savedlist[3]; patrondict = savedlist[4]; transdict = savedlist[5]", globals())
-
-
+try:
+    with open("Library_info.json", "r") as file:
+        savedlist = json.load(file)
+        for i in savedlist[0].keys():   #pull everything out of six dictionaries in a list in a file
+            exec(f"{'book' + i}=Book('{savedlist[0][i][1]}','{savedlist[0][i][0]}','{savedlist[0][i][2]}','{savedlist[0][i][3]}','{savedlist[0][i][4]}'); {'book' + i}.quantShelved={savedlist[0][i][5]}; {'book' + i}.checkoutList={savedlist[0][i][6]}",globals())
+        for i in savedlist[1].keys():
+            exec(f"{'patron' + i}=Patron('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}','{i}.duedates={savedlist[1][i][3]}')",globals())
+        for i in savedlist[2].keys():
+            exec(f"{i}=Trans('{savedlist[1][i][0]}','{savedlist[1][i][1]}','{savedlist[1][i][2]}')", globals())
+        exec("bookdict = savedlist[3]; patrondict = savedlist[4]; transdict = savedlist[5]", globals())
+except:
+    print()
         #Everything below this is GUI code
 
 import tkinter as tk
@@ -496,7 +498,7 @@ def show():
     n = 1
     m = 3
     for i in patrondict.keys():
-        exec(i + f"button= tk.Button(text='{i},{i}.name,command=rmvPatronNames)", globals())
+        exec(i + f"button= tk.Button(text='{i}'+', '+{i}.name,command=rmvPatronNames)", globals())
         exec(i + "button.grid(row=" + str(n) + ", column=" + str(m) + ")", globals())
         n += 1
         if n == 10:
